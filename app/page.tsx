@@ -8,6 +8,15 @@ import {getPublishedBooks} from "@/lib/bookService";
 import { Book } from "@/types/book";
 import Image from "next/image";
 import { getUserProfile } from "@/lib/userService";
+import {
+  addFavoriteAuthor,
+  removeFavoriteAuthor,
+  getUserFavoriteAuthors,
+  FavoriteAuthor,
+  addFavoriteBook,
+  removeFavoriteBook,
+  getUserFavoriteBooks
+} from "@/lib/favoriteService";
 
 export default function HomePage() {
   const { user, loading, signOut } = useAuth();
@@ -16,6 +25,10 @@ export default function HomePage() {
   const router = useRouter();
   const [username, setUsername] = useState<string>("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [favoriteAuthors, setFavoriteAuthors] = useState<Set<string>>(new Set());
+  const [favoriteBooks, setFavoriteBooks] = useState<Set<string>>(new Set());
+  const [favoriteLoading, setFavoriteLoading] = useState<Set<string>>(new Set());
+  const [bookmarkLoading, setBookmarkLoading] = useState<Set<string>>(new Set());
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,6 +39,8 @@ export default function HomePage() {
 
     if (user) {
       loadBooks().then();
+      loadFavoriteAuthors().then();
+      loadFavoriteBooks().then();
     }
   }, [user, loading, router]);
 
@@ -75,6 +90,108 @@ export default function HomePage() {
       console.error("Error loading books:", error);
     } finally {
       setBooksLoading(false);
+    }
+  };
+
+  const loadFavoriteAuthors = async () => {
+    if (!user) {
+      console.log("No user found, skipping favorite authors load");
+      return;
+    }
+
+    console.log("Loading favorites for user:", user.uid);
+
+    try {
+      const favorites = await getUserFavoriteAuthors(user.uid);
+      console.log("Successfully loaded favorites:", favorites);
+      const favoriteAuthorIds = new Set(favorites.map(fav => fav.authorId));
+      setFavoriteAuthors(favoriteAuthorIds);
+    } catch (error) {
+      console.error("Error loading favorite authors:", error);
+    }
+  };
+
+  const loadFavoriteBooks = async () => {
+    if (!user) {
+      console.log("No user found, skipping favorite books load");
+      return;
+    }
+
+    console.log("Loading favorite books for user:", user.uid);
+
+    try {
+      const favorites = await getUserFavoriteBooks(user.uid);
+      console.log("Successfully loaded favorite books:", favorites);
+      const favoriteBookIds = new Set(favorites.map(fav => fav.bookId));
+      setFavoriteBooks(favoriteBookIds);
+    } catch (error) {
+      console.error("Error loading favorite books:", error);
+    }
+  };
+
+  const handleFavoriteAuthor = async (authorId: string, authorName: string, isFavorited: boolean) => {
+    if (!user) return;
+
+    // Prevent multiple clicks while processing
+    if (favoriteLoading.has(authorId)) return;
+
+    // Add to loading set
+    setFavoriteLoading(prev => new Set([...prev, authorId]));
+
+    try {
+      if (isFavorited) {
+        await removeFavoriteAuthor(user.uid, authorId);
+        setFavoriteAuthors(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(authorId);
+          return newSet;
+        });
+      } else {
+        await addFavoriteAuthor(user.uid, authorId, authorName);
+        setFavoriteAuthors(prev => new Set([...prev, authorId]));
+      }
+    } catch (error) {
+      console.error("Error updating favorite author:", error);
+    } finally {
+      // Remove from loading set
+      setFavoriteLoading(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(authorId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleFavoriteBook = async (bookId: string, bookTitle: string, isFavorited: boolean) => {
+    if (!user) return;
+
+    // Prevent multiple clicks while processing
+    if (bookmarkLoading.has(bookId)) return;
+
+    // Add to loading set
+    setBookmarkLoading(prev => new Set([...prev, bookId]));
+
+    try {
+      if (isFavorited) {
+        await removeFavoriteBook(user.uid, bookId);
+        setFavoriteBooks(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(bookId);
+          return newSet;
+        });
+      } else {
+        await addFavoriteBook(user.uid, bookId, bookTitle);
+        setFavoriteBooks(prev => new Set([...prev, bookId]));
+      }
+    } catch (error) {
+      console.error("Error updating favorite book:", error);
+    } finally {
+      // Remove from loading set
+      setBookmarkLoading(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(bookId);
+        return newSet;
+      });
     }
   };
 
@@ -268,77 +385,160 @@ export default function HomePage() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-                  {books.map((book) => (
-                      <div key={book.id} className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow">
-                        <div className="p-6">
-                          <div className="flex gap-4">
-                            {/* Book Cover */}
-                            <div className="flex-shrink-0">
-                              {book.coverImage ? (
-                                  <img
-                                      src={book.coverImage}
-                                      alt={`${book.title} cover`}
-                                      className="w-24 h-32 object-cover rounded-md border"
-                                  />
-                              ) : (
-                                  <div className="w-24 h-32 bg-gray-200 rounded-md border flex items-center justify-center">
-                                    <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                    </svg>
-                                  </div>
-                              )}
-                            </div>
+                  {books.map((book) => {
+                    const isFavoriteAuthor = favoriteAuthors.has(book.authorId);
+                    const isLoadingFavorite = favoriteLoading.has(book.authorId);
+                    const isFavoriteBook = favoriteBooks.has(book.id);
+                    const isLoadingBookmark = bookmarkLoading.has(book.id);
 
-                            {/* Book Info */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between">
-                                <h3 className="text-lg font-medium text-gray-900 mb-2 line-clamp-2">
-                                  {book.title}
-                                </h3>
-                                <span className="capitalize bg-green-100 px-2 py-1 rounded text-xs text-green-800 ml-2">
+                    return (
+                        <div key={book.id} className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow">
+                          <div className="p-6">
+                            <div className="flex gap-4">
+                              {/* Book Cover */}
+                              <div className="flex-shrink-0">
+                                {book.coverImage ? (
+                                    <img
+                                        src={book.coverImage}
+                                        alt={`${book.title} cover`}
+                                        className="w-24 h-32 object-cover rounded-md border"
+                                    />
+                                ) : (
+                                    <div className="w-24 h-32 bg-gray-200 rounded-md border flex items-center justify-center">
+                                      <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                      </svg>
+                                    </div>
+                                )}
+                              </div>
+
+                              {/* Book Info */}
+                              <div className="flex-1 min-w-0 flex flex-col">
+                                <div className="flex items-start justify-between">
+                                  <h3 className="text-lg font-medium text-gray-900 mb-2 line-clamp-2 min-h-[3.5rem]">
+                                    {book.title}
+                                  </h3>
+                                  <span className="capitalize bg-green-100 px-2 py-1 rounded text-xs text-green-800 ml-2 flex-shrink-0">
                                   {getBookStatusInfo(book).statusText}
                                 </span>
-                              </div>
+                                </div>
 
-                              <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                                {book.description}
-                              </p>
+                                <p className="text-sm text-gray-600 mb-3 line-clamp-2 min-h-[2.5rem]">
+                                  {book.description}
+                                </p>
 
-                              <div className="text-xs text-gray-500 mb-3">
-                                by {book.authorName}
-                              </div>
-
-                              <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
-                                <span>{book.publishedChapters} published chapters</span>
-                                <span>updated: {book.updatedAt.toLocaleDateString()}</span>
-                              </div>
-
-                              {book.genres.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mb-4">
-                                    {book.genres.slice(0, 2).map((genre) => (
-                                        <span key={genre} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-indigo-800">
-                                {genre}
-                              </span>
-                                    ))}
-                                    {book.genres.length > 2 && (
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                                +{book.genres.length - 2}
-                              </span>
+                                {/* Author section with favorite button */}
+                                <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+                                  <div className="flex items-center space-x-2">
+                                    <span>by {book.authorName}</span>
+                                    {/* Don't show favorite button for own books */}
+                                    {book.authorId !== user?.uid && (
+                                        <button
+                                            onClick={(e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                              handleFavoriteAuthor(book.authorId, book.authorName, isFavoriteAuthor);
+                                            }}
+                                            disabled={isLoadingFavorite}
+                                            className={`p-1 rounded-full transition-colors duration-200 ${
+                                                isLoadingFavorite
+                                                    ? 'opacity-50 cursor-not-allowed'
+                                                    : 'hover:bg-gray-100'
+                                            }`}
+                                            title={isFavoriteAuthor ? 'Remove from favorite authors' : 'Add to favorite authors'}
+                                        >
+                                          <svg
+                                              className={`w-4 h-4 transition-colors duration-200 ${
+                                                  isFavoriteAuthor
+                                                      ? 'text-red-500 fill-current'
+                                                      : 'text-gray-400 hover:text-red-400'
+                                              }`}
+                                              fill={isFavoriteAuthor ? 'currentColor' : 'none'}
+                                              viewBox="0 0 24 24"
+                                              stroke="currentColor"
+                                          >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                            />
+                                          </svg>
+                                        </button>
                                     )}
                                   </div>
-                              )}
+                                </div>
 
-                              <Link
-                                  href={`/book/${book.id}`}
-                                  className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-indigo-700 bg-green-400 hover:bg-green-500 w-full"
-                              >
-                                Read Book
-                              </Link>
+                                <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
+                                  <span>{book.publishedChapters} published chapters</span>
+                                  <span>updated: {book.updatedAt.toLocaleDateString()}</span>
+                                </div>
+
+                                {book.genres.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mb-4">
+                                      {book.genres.slice(0, 2).map((genre) => (
+                                          <span key={genre} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-indigo-800">
+                                {genre}
+                              </span>
+                                      ))}
+                                      {book.genres.length > 2 && (
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                +{book.genres.length - 2}
+                              </span>
+                                      )}
+                                    </div>
+                                )}
+
+                                <div className="flex space-x-2">
+                                  <Link
+                                      href={`/book/${book.id}`}
+                                      className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-indigo-700 bg-green-400 hover:bg-green-500"
+                                  >
+                                    Read Book
+                                  </Link>
+                                  <button
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleFavoriteBook(book.id, book.title, isFavoriteBook);
+                                      }}
+                                      disabled={isLoadingBookmark}
+                                      className={`px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md transition-colors duration-200 ${
+                                          isFavoriteBook
+                                              ? 'text-red-500 bg-yellow-100 hover:bg-yellow-200'
+                                              : 'text-red-500 bg-red-100 hover:bg-red-200'
+                                      } ${
+                                          isLoadingBookmark
+                                              ? 'opacity-50 cursor-not-allowed'
+                                              : ''
+                                      }`}
+                                      title={isFavoriteBook ? 'Remove from favorites' : 'Add to favorites'}
+                                      style={{ height: '38px', width: '38px' }}
+                                  >
+                                    <svg
+                                        className={`w-4 h-4 ${
+                                            isFavoriteBook
+                                                ? 'fill-current'
+                                                : 'fill-none'
+                                        }`}
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        strokeWidth={2}
+                                    >
+                                      <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"
+                                      />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                  ))}
+                    );
+                  })}
                 </div>
             )}
           </div>
