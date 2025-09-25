@@ -503,7 +503,7 @@ export default function HomePage() {
                                         handleFavoriteBook(book.id, book.title, isFavoriteBook);
                                       }}
                                       disabled={isLoadingBookmark}
-                                      className={`px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md transition-colors duration-200 ${
+                                      className={`px-2.5 py-2 border border-transparent text-sm leading-4 font-medium rounded-md transition-colors duration-200 ${
                                           isFavoriteBook
                                               ? 'text-red-500 bg-yellow-100 hover:bg-yellow-200'
                                               : 'text-red-500 bg-red-100 hover:bg-red-200'
