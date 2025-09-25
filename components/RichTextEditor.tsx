@@ -51,6 +51,20 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                     break;
             }
         }
+
+        // Handle Enter key for paragraph breaks
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            executeCommand('insertHTML');
+            // Insert proper paragraph structure
+            document.execCommand('insertHTML', false, '<br><br>');
+            handleInput();
+        } else if (e.key === 'Enter' && e.shiftKey) {
+            // Shift+Enter for single line break
+            e.preventDefault();
+            document.execCommand('insertHTML', false, '<br>');
+            handleInput();
+        }
     };
 
     const getWordCount = () => {
@@ -83,9 +97,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
                 <div className="flex-1"></div>
 
-                <span className="text-xs text-gray-500">
-          Words: {getWordCount()}
-        </span>
+                <div className="text-xs text-gray-500">
+                    <span>Words: {getWordCount()}</span>
+                    <span className="ml-3 text-gray-400">Enter: New paragraph • Shift+Enter: Line break</span>
+                </div>
             </div>
 
             {/* Editor */}
@@ -96,26 +111,45 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 onKeyDown={handleKeyDown}
-                className="min-h-[400px] p-4 text-gray-900 focus:outline-none"
+                className="min-h-[400px] p-4 text-gray-900 focus:outline-none prose prose-gray max-w-none"
                 style={{
-                    lineHeight: '1.6',
-                    fontSize: '14px',
+                    lineHeight: '1.8',      // Match FormattedTextDisplay
+                    fontSize: '16px',       // Match FormattedTextDisplay
                 }}
                 data-placeholder={placeholder}
                 suppressContentEditableWarning={true}
             />
 
             <style jsx>{`
-        [contenteditable]:empty:before {
-          content: attr(data-placeholder);
-          color: #9ca3af;
-          pointer-events: none;
-        }
-        
-        [contenteditable] {
-          font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        }
-      `}</style>
+                [contenteditable]:empty:before {
+                    content: attr(data-placeholder);
+                    color: #9ca3af;
+                    pointer-events: none;
+                }
+
+                [contenteditable] {
+                    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                }
+
+                /* Match paragraph spacing from FormattedTextDisplay */
+                [contenteditable] p {
+                    margin: 1.33333em 0;
+                }
+
+                /* Ensure consistent bold and italic rendering */
+                [contenteditable] b, [contenteditable] strong {
+                    font-weight: 600;
+                }
+
+                [contenteditable] i, [contenteditable] em {
+                    font-style: italic;
+                }
+
+                /* Handle line breaks properly */
+                [contenteditable] br {
+                    line-height: 1.8;
+                }
+            `}</style>
         </div>
     );
 };

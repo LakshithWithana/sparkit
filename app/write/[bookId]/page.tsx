@@ -28,6 +28,7 @@ const WriteBookPage: React.FC = () => {
     const [error, setError] = useState("");
     const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
     const [isCreatingChapter, setIsCreatingChapter] = useState(false);
+    const [publishingChapters, setPublishingChapters] = useState<Set<string>>(new Set());
 
     const [chapterForm, setChapterForm] = useState<ChapterFormData>({
         title: "",
@@ -148,21 +149,24 @@ const WriteBookPage: React.FC = () => {
         }
     };
 
-    const handlePublishChapter = async (chapterId: string) => {
-        try {
-            await publishChapter(chapterId);
-            await loadBookData();
-        } catch (error: any) {
-            setError(error.message || "Failed to publish chapter");
-        }
-    };
+    const handleToggleChapterPublish = async (chapterId: string, isCurrentlyPublished: boolean) => {
+        setPublishingChapters(prev => new Set([...prev, chapterId]));
 
-    const handleUnpublishChapter = async (chapterId: string) => {
         try {
-            await unpublishChapter(chapterId);
+            if (isCurrentlyPublished) {
+                await unpublishChapter(chapterId);
+            } else {
+                await publishChapter(chapterId);
+            }
             await loadBookData();
         } catch (error: any) {
-            setError(error.message || "Failed to unpublish chapter");
+            setError(error.message || "Failed to update chapter status");
+        } finally {
+            setPublishingChapters(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(chapterId);
+                return newSet;
+            });
         }
     };
 
@@ -243,6 +247,12 @@ const WriteBookPage: React.FC = () => {
             </div>
 
             <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                {error && (
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+                        {error}
+                    </div>
+                )}
+
                 <div className="flex gap-6">
                     {/* Chapters Sidebar */}
                     <div className="w-80 bg-white shadow rounded-lg p-4">
@@ -255,55 +265,77 @@ const WriteBookPage: React.FC = () => {
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                {chapters.map((chapter) => (
-                                    <div
-                                        key={chapter.id}
-                                        className={`border rounded-lg p-3 cursor-pointer transition-colors ${
-                                            selectedChapter?.id === chapter.id
-                                                ? "border-indigo-500 bg-indigo-50"
-                                                : "border-gray-200 hover:border-gray-300"
-                                        }`}
-                                        onClick={() => handleChapterSelect(chapter)}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium text-gray-900">
-                                                    Chapter {chapter.chapterNumber}
-                                                </p>
-                                                <p className="text-sm text-gray-600 truncate">
+                                {chapters.map((chapter) => {
+                                    const isToggling = publishingChapters.has(chapter.id);
+
+                                    return (
+                                        <div
+                                            key={chapter.id}
+                                            className={`border rounded-lg p-3 cursor-pointer transition-colors relative ${
+                                                selectedChapter?.id === chapter.id
+                                                    ? "border-indigo-500 bg-indigo-50"
+                                                    : "border-gray-200 hover:border-gray-300"
+                                            }`}
+                                            onClick={() => handleChapterSelect(chapter)}
+                                        >
+                                            {/* Toggle Switch */}
+                                            <div className="absolute top-3 right-3">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleToggleChapterPublish(chapter.id, chapter.isPublished);
+                                                    }}
+                                                    disabled={isToggling}
+                                                    className={`
+                                                        relative inline-flex items-center h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent 
+                                                        transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2
+                                                        ${chapter.isPublished
+                                                        ? 'bg-green-600'
+                                                        : 'bg-gray-300'
+                                                    }
+                                                        ${isToggling ? 'opacity-50 cursor-not-allowed' : ''}
+                                                    `}
+                                                    title={chapter.isPublished ? 'Published - Click to unpublish' : 'Draft - Click to publish'}
+                                                >
+                                                    <span
+                                                        className={`
+                                                            inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out
+                                                            ${chapter.isPublished ? 'translate-x-4' : 'translate-x-0'}
+                                                        `}
+                                                    />
+                                                </button>
+                                            </div>
+
+                                            <div className="pr-12">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <p className="text-sm font-medium text-gray-900">
+                                                        Chapter {chapter.chapterNumber}
+                                                    </p>
+                                                    <span
+                                                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                                            chapter.isPublished
+                                                                ? "bg-green-100 text-green-800"
+                                                                : "bg-gray-100 text-gray-800"
+                                                        }`}
+                                                    >
+                                                        {chapter.isPublished ? "Published" : "Draft"}
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm text-gray-600 truncate mb-1">
                                                     {chapter.title}
                                                 </p>
                                                 <p className="text-xs text-gray-500">
                                                     {chapter.wordCount} words
                                                 </p>
-                                            </div>
-                                            <div className="flex flex-col items-end space-y-1">
-                                                <span
-                                                    className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                                        chapter.isPublished
-                                                            ? "bg-green-100 text-green-800"
-                                                            : "bg-gray-100 text-gray-800"
-                                                    }`}
-                                                >
-                                                    {chapter.isPublished ? "Published" : "Draft"}
-                                                </span>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (chapter.isPublished) {
-                                                            handleUnpublishChapter(chapter.id);
-                                                        } else {
-                                                            handlePublishChapter(chapter.id);
-                                                        }
-                                                    }}
-                                                    className="text-xs text-indigo-600 hover:text-indigo-500"
-                                                >
-                                                    {chapter.isPublished ? "Unpublish" : "Publish"}
-                                                </button>
+                                                {chapter.isPublished && (
+                                                    <p className="text-xs text-green-600 mt-1">
+                                                        Visible to readers
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
@@ -312,12 +344,6 @@ const WriteBookPage: React.FC = () => {
                     <div className="flex-1 bg-white shadow rounded-lg">
                         {(selectedChapter || isCreatingChapter) ? (
                             <div className="p-6">
-                                {error && (
-                                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                                        {error}
-                                    </div>
-                                )}
-
                                 <div className="flex justify-between items-start mb-6">
                                     <div>
                                         <h2 className="text-xl font-semibold text-gray-900">

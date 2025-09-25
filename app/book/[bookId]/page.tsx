@@ -1,4 +1,3 @@
-// app/book/[bookId]/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
