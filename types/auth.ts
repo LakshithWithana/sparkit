@@ -26,5 +26,26 @@ export interface UserProfile {
     username: string;
     email: string;
     displayName: string;
+    profilePic?: string;
+    bio?: string;
+    location?: string;
+    socialLinks?: SocialLinks;
     createdAt: Date;
+    updatedAt?: Date;
+}
+
+export interface SocialLinks {
+    twitter?: string;
+    instagram?: string;
+    facebook?: string;
+    website?: string;
+    linkedin?: string;
+}
+
+export interface ProfileFormData {
+    displayName: string;
+    bio: string;
+    location: string;
+    socialLinks: SocialLinks;
+    profilePic?: File;
 }
