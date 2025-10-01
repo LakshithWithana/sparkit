@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, {useState, useEffect, useCallback} from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -35,18 +35,7 @@ const WriteBookPage: React.FC = () => {
         content: "",
     });
 
-    useEffect(() => {
-        if (!user) {
-            router.push("/signin");
-            return;
-        }
-
-        if (bookId) {
-            loadBookData();
-        }
-    }, [user, bookId, router]);
-
-    const loadBookData = async () => {
+    const loadBookData = useCallback(async () => {
         try {
             setLoading(true);
             const [bookData, chaptersData] = await Promise.all([
@@ -66,12 +55,23 @@ const WriteBookPage: React.FC = () => {
 
             setBook(bookData);
             setChapters(chaptersData);
-        } catch (error: any) {
-            setError(error.message || "Failed to load book data");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to load book data");
         } finally {
             setLoading(false);
         }
-    };
+    }, [bookId, user?.uid]);
+
+    useEffect(() => {
+        if (!user) {
+            router.push("/signin");
+            return;
+        }
+
+        if (bookId) {
+            loadBookData();
+        }
+    }, [user, bookId, router, loadBookData]);
 
     const handleChapterSelect = (chapter: Chapter) => {
         setSelectedChapter(chapter);
@@ -142,8 +142,8 @@ const WriteBookPage: React.FC = () => {
                 await updateChapter(selectedChapter.id, chapterForm);
                 await loadBookData();
             }
-        } catch (error: any) {
-            setError(error.message || "Failed to save chapter");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to save chapter");
         } finally {
             setSaving(false);
         }
@@ -159,8 +159,8 @@ const WriteBookPage: React.FC = () => {
                 await publishChapter(chapterId);
             }
             await loadBookData();
-        } catch (error: any) {
-            setError(error.message || "Failed to update chapter status");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to update chapter status");
         } finally {
             setPublishingChapters(prev => {
                 const newSet = new Set(prev);
@@ -184,8 +184,8 @@ const WriteBookPage: React.FC = () => {
                 setChapterForm({ title: "", content: "" });
                 setIsCreatingChapter(false);
             }
-        } catch (error: any) {
-            setError(error.message || "Failed to delete chapter");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to delete chapter");
         }
     };
 
@@ -261,7 +261,7 @@ const WriteBookPage: React.FC = () => {
                         {chapters.length === 0 ? (
                             <div className="text-center text-gray-500 py-8">
                                 <p>No chapters yet</p>
-                                <p className="text-sm">Click "New Chapter" to get started</p>
+                                <p className="text-sm">Click &quot;New Chapter&quot; to get started</p>
                             </div>
                         ) : (
                             <div className="space-y-2">

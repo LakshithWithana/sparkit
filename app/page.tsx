@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, {useEffect, useState, useRef, useCallback} from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,7 +12,6 @@ import {
   addFavoriteAuthor,
   removeFavoriteAuthor,
   getUserFavoriteAuthors,
-  FavoriteAuthor,
   addFavoriteBook,
   removeFavoriteBook,
   getUserFavoriteBooks
@@ -30,19 +29,6 @@ export default function HomePage() {
   const [favoriteLoading, setFavoriteLoading] = useState<Set<string>>(new Set());
   const [bookmarkLoading, setBookmarkLoading] = useState<Set<string>>(new Set());
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/signin");
-      return;
-    }
-
-    if (user) {
-      loadBooks().then();
-      loadFavoriteAuthors().then();
-      loadFavoriteBooks().then();
-    }
-  }, [user, loading, router]);
 
   useEffect(() => {
     const fetchUsername = async () => {
@@ -81,7 +67,7 @@ export default function HomePage() {
     };
   }, []);
 
-  const loadBooks = async () => {
+  const loadBooks = useCallback(async () => {
     try {
       setBooksLoading(true);
       const allBooks = await getPublishedBooks();
@@ -91,9 +77,9 @@ export default function HomePage() {
     } finally {
       setBooksLoading(false);
     }
-  };
+  }, []);
 
-  const loadFavoriteAuthors = async () => {
+  const loadFavoriteAuthors = useCallback(async () => {
     if (!user) {
       console.log("No user found, skipping favorite authors load");
       return;
@@ -109,9 +95,9 @@ export default function HomePage() {
     } catch (error) {
       console.error("Error loading favorite authors:", error);
     }
-  };
+  }, [user]);
 
-  const loadFavoriteBooks = async () => {
+  const loadFavoriteBooks = useCallback(async () => {
     if (!user) {
       console.log("No user found, skipping favorite books load");
       return;
@@ -127,7 +113,20 @@ export default function HomePage() {
     } catch (error) {
       console.error("Error loading favorite books:", error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/signin");
+      return;
+    }
+
+    if (user) {
+      loadBooks();
+      loadFavoriteAuthors();
+      loadFavoriteBooks();
+    }
+  }, [user, loading, router, loadBooks, loadFavoriteAuthors, loadFavoriteBooks]);
 
   const handleFavoriteAuthor = async (authorId: string, authorName: string, isFavorited: boolean) => {
     if (!user) return;
@@ -398,9 +397,11 @@ export default function HomePage() {
                               {/* Book Cover */}
                               <div className="flex-shrink-0">
                                 {book.coverImage ? (
-                                    <img
+                                    <Image
                                         src={book.coverImage}
                                         alt={`${book.title} cover`}
+                                        width={96}
+                                        height={128}
                                         className="w-24 h-32 object-cover rounded-md border"
                                     />
                                 ) : (

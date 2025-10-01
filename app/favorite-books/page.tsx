@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, {useState, useEffect, useCallback} from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { getUserFavoriteBooks, removeFavoriteBook, FavoriteBook } from "@/lib/favoriteService";
 import { getBook } from "@/lib/bookService";
 import { Book } from "@/types/book";
+import Image from "next/image";
 
 interface FavoriteBookWithDetails extends FavoriteBook {
     bookDetails: Book | null;
@@ -20,16 +21,7 @@ const FavoriteBooksPage: React.FC = () => {
     const [error, setError] = useState("");
     const [removingBooks, setRemovingBooks] = useState<Set<string>>(new Set());
 
-    useEffect(() => {
-        if (!user) {
-            router.push("/signin");
-            return;
-        }
-
-        loadFavoriteBooks();
-    }, [user, router]);
-
-    const loadFavoriteBooks = async () => {
+    const loadFavoriteBooks = useCallback(async () => {
         if (!user) return;
 
         try {
@@ -53,12 +45,21 @@ const FavoriteBooksPage: React.FC = () => {
             );
 
             setFavoriteBooks(validFavorites);
-        } catch (error: any) {
-            setError(error.message || "Failed to load favorite books");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to load favorite books");
         } finally {
             setLoading(false);
         }
-    };
+    }, [user]);
+
+    useEffect(() => {
+        if (!user) {
+            router.push("/signin");
+            return;
+        }
+
+        loadFavoriteBooks();
+    }, [user, router, loadFavoriteBooks]);
 
     const handleRemoveFavorite = async (bookId: string) => {
         if (!user) return;
@@ -78,8 +79,8 @@ const FavoriteBooksPage: React.FC = () => {
             setFavoriteBooks((prev) =>
                 prev.filter((fav) => fav.bookId !== bookId)
             );
-        } catch (error: any) {
-            setError(error.message || "Failed to remove favorite");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to remove favorite");
         } finally {
             setRemovingBooks((prev) => {
                 const newSet = new Set(prev);
@@ -175,9 +176,11 @@ const FavoriteBooksPage: React.FC = () => {
                                                 {/* Book Cover */}
                                                 <div className="flex-shrink-0">
                                                     {book.coverImage ? (
-                                                        <img
+                                                        <Image
                                                             src={book.coverImage}
                                                             alt={`${book.title} cover`}
+                                                            width={96}
+                                                            height={128}
                                                             className="w-24 h-32 object-cover rounded-md border"
                                                         />
                                                     ) : (

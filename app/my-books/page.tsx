@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, {useState, useEffect, useCallback} from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { getUserBooks, deleteBook, publishBook, unpublishBook } from "../../lib/bookService";
+import { getUserBooks, deleteBook, publishBook, unpublishBook } from "@/lib/bookService";
 import { Book } from "@/types/book";
 import EditBookModal from "../../components/EditBookModal";
+import Image from "next/image";
 
 const MyBooksPage: React.FC = () => {
     const { user } = useAuth();
@@ -18,6 +19,20 @@ const MyBooksPage: React.FC = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [publishingBooks, setPublishingBooks] = useState<Set<string>>(new Set());
 
+    const loadMyBooks = useCallback(async () => {
+        if (!user) return;
+
+        try {
+            setLoading(true);
+            const userBooks = await getUserBooks(user.uid);
+            setBooks(userBooks);
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to load books");
+        } finally {
+            setLoading(false);
+        }
+    }, [user]);
+
     useEffect(() => {
         if (!user) {
             router.push("/signin");
@@ -25,21 +40,7 @@ const MyBooksPage: React.FC = () => {
         }
 
         loadMyBooks();
-    }, [user, router]);
-
-    const loadMyBooks = async () => {
-        if (!user) return;
-
-        try {
-            setLoading(true);
-            const userBooks = await getUserBooks(user.uid);
-            setBooks(userBooks);
-        } catch (error: any) {
-            setError(error.message || "Failed to load books");
-        } finally {
-            setLoading(false);
-        }
-    };
+    }, [user, router, loadMyBooks]);
 
     const handleEditBook = (book: Book) => {
         setEditingBook(book);
@@ -52,7 +53,7 @@ const MyBooksPage: React.FC = () => {
     };
 
     const handleBookUpdated = () => {
-        loadMyBooks(); // Reload books after update
+        loadMyBooks().then(); // Reload books after update
     };
 
     const handleTogglePublish = async (bookId: string, currentStatus: string) => {
@@ -65,8 +66,8 @@ const MyBooksPage: React.FC = () => {
                 await unpublishBook(bookId);
             }
             await loadMyBooks();
-        } catch (error: any) {
-            setError(error.message || "Failed to update book status");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to update book status");
         } finally {
             setPublishingBooks(prev => {
                 const newSet = new Set(prev);
@@ -84,8 +85,8 @@ const MyBooksPage: React.FC = () => {
         try {
             await deleteBook(bookId);
             await loadMyBooks();
-        } catch (error: any) {
-            setError(error.message || "Failed to delete book");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to delete book");
         }
     };
 
@@ -196,9 +197,11 @@ const MyBooksPage: React.FC = () => {
                                                 {/* Book Cover */}
                                                 <div className="flex-shrink-0">
                                                     {book.coverImage ? (
-                                                        <img
+                                                        <Image
                                                             src={book.coverImage}
                                                             alt={`${book.title} cover`}
+                                                            width={80}
+                                                            height={112}
                                                             className="w-20 h-28 object-cover rounded-md border"
                                                         />
                                                     ) : (

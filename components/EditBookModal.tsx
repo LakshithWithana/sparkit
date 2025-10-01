@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { updateBook } from "@/lib/bookService";
 import { validateImageFile } from "@/lib/storageService";
 import { Book, BookFormData } from "@/types/book";
+import Image from "next/image";
 
 const POPULAR_GENRES = [
     "Fiction", "Non-fiction", "Mystery", "Romance", "Fantasy", "Science Fiction",
@@ -123,8 +124,8 @@ const EditBookModal: React.FC<EditBookModalProps> = ({
             await updateBook(book.id, formData, book.authorId);
             onUpdate();
             onClose();
-        } catch (error: any) {
-            setError(error.message || "Failed to update book");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to update book");
         } finally {
             setLoading(false);
         }
@@ -163,15 +164,17 @@ const EditBookModal: React.FC<EditBookModalProps> = ({
                             <div className="flex-shrink-0">
                                 {imagePreview ? (
                                     <div className="relative">
-                                        <img
+                                        <Image
                                             src={imagePreview}
                                             alt="Cover preview"
-                                            className="w-24 h-32 object-cover rounded-md border"
+                                            width={128}
+                                            height={160}
+                                            className="w-32 h-40 object-cover rounded-md border"
                                         />
                                         <button
                                             type="button"
                                             onClick={handleRemoveImage}
-                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
                                         >
                                             ×
                                         </button>

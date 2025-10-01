@@ -33,8 +33,8 @@ const SignInPage: React.FC = () => {
             setLoading(true);
             await signIn(formData.email, formData.password);
             router.push("/");
-        } catch (error: any) {
-            setError(error.message || "Failed to sign in");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to sign in");
         } finally {
             setLoading(false);
         }
@@ -46,8 +46,8 @@ const SignInPage: React.FC = () => {
             setLoading(true);
             await signInWithGoogle();
             router.push("/dashboard");
-        } catch (error: any) {
-            setError(error.message || "Failed to sign in with Google");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to sign in with Google");
         } finally {
             setLoading(false);
         }

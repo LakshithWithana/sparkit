@@ -7,6 +7,7 @@ import { createBook } from "@/lib/bookService";
 import { validateImageFile } from "@/lib/storageService";
 import { BookFormData } from "@/types/book";
 import { getUserProfile} from "@/lib/userService";
+import Image from "next/image";
 
 const POPULAR_GENRES = [
     "Fiction", "Non-fiction", "Mystery", "Romance", "Fantasy", "Science Fiction",
@@ -142,8 +143,8 @@ const WritePage: React.FC = () => {
             );
 
             router.push(`/write/${bookId}`);
-        } catch (error: any) {
-            setError(error.message || "Failed to create book");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to create book");
         } finally {
             setLoading(false);
         }
@@ -197,9 +198,11 @@ const WritePage: React.FC = () => {
                                 <div className="flex-shrink-0">
                                     {imagePreview ? (
                                         <div className="relative">
-                                            <img
+                                            <Image
                                                 src={imagePreview}
                                                 alt="Cover preview"
+                                                width={128}
+                                                height={160}
                                                 className="w-32 h-40 object-cover rounded-md border"
                                             />
                                             <button

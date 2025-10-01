@@ -1,17 +1,7 @@
-import {
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    updateDoc,
-    query,
-    where,
-    serverTimestamp,
-    Timestamp,
-} from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { db, storage } from "./firebase";
-import { UserProfile, ProfileFormData } from "@/types/auth";
+import {collection, getDocs, query, serverTimestamp, Timestamp, updateDoc, where,} from "firebase/firestore";
+import {deleteObject, getDownloadURL, ref, uploadBytes} from "firebase/storage";
+import {db, storage} from "./firebase";
+import {ProfileFormData, UserProfile} from "@/types/auth";
 
 export const uploadProfilePicture = async (
     file: File,
@@ -26,9 +16,7 @@ export const uploadProfilePicture = async (
         const snapshot = await uploadBytes(storageRef, file);
 
         // Get the download URL
-        const downloadURL = await getDownloadURL(snapshot.ref);
-
-        return downloadURL;
+        return await getDownloadURL(snapshot.ref);
     } catch (error) {
         console.error("Error uploading profile picture:", error);
         throw error;
@@ -83,7 +71,7 @@ export const updateUserProfile = async (
         const userDocRef = usersSnapshot.docs[0].ref;
         const currentData = usersSnapshot.docs[0].data();
 
-        const updateData: any = {
+        const updateData: Record<string, unknown> = {
             displayName: profileData.displayName,
             bio: profileData.bio || "",
             location: profileData.location || "",
@@ -100,8 +88,7 @@ export const updateUserProfile = async (
                 }
 
                 // Upload new profile picture
-                const profilePicUrl = await uploadProfilePicture(profileData.profilePic, userId);
-                updateData.profilePic = profilePicUrl;
+                updateData.profilePic = await uploadProfilePicture(profileData.profilePic, userId);
             } catch (error) {
                 console.error("Error updating profile picture:", error);
                 throw new Error("Failed to update profile picture");

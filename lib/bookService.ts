@@ -1,20 +1,20 @@
 import {
-    collection,
     addDoc,
-    updateDoc,
+    collection,
     deleteDoc,
     doc,
-    getDocs,
     getDoc,
-    query,
-    where,
+    getDocs,
     orderBy,
+    query,
     serverTimestamp,
     Timestamp,
+    updateDoc,
+    where,
 } from "firebase/firestore";
-import { db } from "./firebase";
-import { Book, Chapter, BookFormData, ChapterFormData } from "@/types/book";
-import { uploadBookCover, deleteBookCover } from "./storageService";
+import {db} from "./firebase";
+import {Book, BookFormData, Chapter, ChapterFormData} from "@/types/book";
+import {deleteBookCover, uploadBookCover} from "./storageService";
 
 // Book operations
 export const createBook = async (
@@ -60,7 +60,7 @@ export const updateBook = async (
     authorId?: string
 ): Promise<void> => {
     const bookRef = doc(db, "books", bookId);
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
         updatedAt: serverTimestamp(),
     };
 
@@ -79,8 +79,7 @@ export const updateBook = async (
             }
 
             // Upload new image
-            const coverImageUrl = await uploadBookCover(updates.coverImage, bookId, authorId);
-            updateData.coverImage = coverImageUrl;
+            updateData.coverImage = await uploadBookCover(updates.coverImage, bookId, authorId);
         } catch (error) {
             console.error("Error updating cover image:", error);
             throw new Error("Failed to update cover image");
@@ -113,21 +112,6 @@ export const deleteBook = async (bookId: string): Promise<void> => {
 
     // Delete the book
     await deleteDoc(bookRef);
-};
-
-export const getAllBooks = async (): Promise<Book[]> => {
-    const booksQuery = query(
-        collection(db, "books"),
-        orderBy("updatedAt", "desc")
-    );
-    const snapshot = await getDocs(booksQuery);
-
-    return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: (doc.data().createdAt as Timestamp).toDate(),
-        updatedAt: (doc.data().updatedAt as Timestamp).toDate(),
-    })) as Book[];
 };
 
 export const getUserBooks = async (authorId: string): Promise<Book[]> => {
@@ -195,7 +179,7 @@ export const updateChapter = async (
     chapterId: string,
     updates: Partial<ChapterFormData>
 ): Promise<void> => {
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
         ...updates,
         updatedAt: serverTimestamp(),
     };
@@ -312,7 +296,7 @@ export const deleteChapter = async (chapterId: string): Promise<void> => {
     const bookSnap = await getDoc(bookRef);
 
     if (bookSnap.exists()) {
-        const updates: any = {
+        const updates: Record<string, unknown> = {
             totalChapters: Math.max(0, (bookSnap.data().totalChapters || 0) - 1),
             updatedAt: serverTimestamp(),
         };

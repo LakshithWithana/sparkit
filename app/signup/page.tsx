@@ -57,8 +57,8 @@ const SignUpPage: React.FC = () => {
             setLoading(true);
             await signUp(formData.email, formData.password, formData.username);
             router.push("/");
-        } catch (error: any) {
-            setError(error.message || "Failed to create account");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to create account");
         } finally {
             setLoading(false);
         }
@@ -70,8 +70,8 @@ const SignUpPage: React.FC = () => {
             setLoading(true);
             await signInWithGoogle();
             router.push("/");
-        } catch (error: any) {
-            setError(error.message || "Failed to sign up with Google");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to sign up with Google");
         } finally {
             setLoading(false);
         }

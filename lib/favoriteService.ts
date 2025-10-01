@@ -6,7 +6,6 @@ import {
     query,
     where,
     serverTimestamp,
-    Timestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
 

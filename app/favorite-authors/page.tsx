@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, {useState, useEffect, useCallback} from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,6 +9,7 @@ import { getUserBooks } from "@/lib/bookService";
 import { getUserProfileByUid } from "@/lib/profileService";
 import { Book } from "@/types/book";
 import { UserProfile } from "@/types/auth";
+import Image from "next/image";
 
 interface FavoriteAuthorWithDetails extends FavoriteAuthor {
     profile: UserProfile | null;
@@ -23,16 +24,7 @@ const FavoriteAuthorsPage: React.FC = () => {
     const [error, setError] = useState("");
     const [removingAuthors, setRemovingAuthors] = useState<Set<string>>(new Set());
 
-    useEffect(() => {
-        if (!user) {
-            router.push("/signin");
-            return;
-        }
-
-        loadFavoriteAuthors();
-    }, [user, router]);
-
-    const loadFavoriteAuthors = async () => {
+    const loadFavoriteAuthors = useCallback(async () => {
         if (!user) return;
 
         try {
@@ -61,12 +53,21 @@ const FavoriteAuthorsPage: React.FC = () => {
             );
 
             setFavoriteAuthors(favoritesWithDetails);
-        } catch (error: any) {
-            setError(error.message || "Failed to load favorite authors");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to load favorite authors");
         } finally {
             setLoading(false);
         }
-    };
+    }, [user]);
+
+    useEffect(() => {
+        if (!user) {
+            router.push("/signin");
+            return;
+        }
+
+        loadFavoriteAuthors();
+    }, [user, router, loadFavoriteAuthors]);
 
     const handleRemoveFavorite = async (authorId: string, authorName: string) => {
         if (!user) return;
@@ -86,8 +87,8 @@ const FavoriteAuthorsPage: React.FC = () => {
             setFavoriteAuthors((prev) =>
                 prev.filter((fav) => fav.authorId !== authorId)
             );
-        } catch (error: any) {
-            setError(error.message || "Failed to remove favorite author");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to remove favorite author");
         } finally {
             setRemovingAuthors((prev) => {
                 const newSet = new Set(prev);
@@ -183,9 +184,11 @@ const FavoriteAuthorsPage: React.FC = () => {
                                                     {/* Profile Picture */}
                                                     <div className="flex-shrink-0">
                                                         {profile?.profilePic ? (
-                                                            <img
+                                                            <Image
                                                                 src={profile.profilePic}
                                                                 alt={`${favorite.authorName} profile`}
+                                                                width={80}
+                                                                height={80}
                                                                 className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
                                                             />
                                                         ) : (
@@ -260,9 +263,11 @@ const FavoriteAuthorsPage: React.FC = () => {
                                                                     {/* Book Cover */}
                                                                     <div className="flex-shrink-0">
                                                                         {book.coverImage ? (
-                                                                            <img
+                                                                            <Image
                                                                                 src={book.coverImage}
                                                                                 alt={`${book.title} cover`}
+                                                                                width={64}
+                                                                                height={80}
                                                                                 className="w-16 h-20 object-cover rounded border"
                                                                             />
                                                                         ) : (

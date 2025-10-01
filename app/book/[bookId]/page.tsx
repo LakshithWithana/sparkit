@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, {useState, useEffect, useCallback} from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,18 +20,7 @@ const BookReaderPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    useEffect(() => {
-        if (!user) {
-            router.push("/signin");
-            return;
-        }
-
-        if (bookId) {
-            loadBookData();
-        }
-    }, [user, bookId, router]);
-
-    const loadBookData = async () => {
+    const loadBookData = useCallback(async () => {
         try {
             setLoading(true);
             const [bookData, chaptersData] = await Promise.all([
@@ -51,12 +40,23 @@ const BookReaderPage: React.FC = () => {
             if (chaptersData.length > 0) {
                 setSelectedChapter(chaptersData[0]);
             }
-        } catch (error: any) {
-            setError(error.message || "Failed to load book");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to load book");
         } finally {
             setLoading(false);
         }
-    };
+    }, [bookId]);
+
+    useEffect(() => {
+        if (!user) {
+            router.push("/signin");
+            return;
+        }
+
+        if (bookId) {
+            loadBookData().then();
+        }
+    }, [user, bookId, router, loadBookData]);
 
     const handleChapterSelect = (chapter: Chapter) => {
         setSelectedChapter(chapter);
@@ -142,7 +142,7 @@ const BookReaderPage: React.FC = () => {
                         </div>
                         <h3 className="mt-2 text-sm font-medium text-gray-900">No published chapters</h3>
                         <p className="mt-1 text-sm text-gray-500">
-                            This book doesn't have any published chapters yet.
+                            This book doesn&#39;t have any published chapters yet.
                         </p>
                         {book?.authorId === user?.uid && (
                             <div className="mt-6">

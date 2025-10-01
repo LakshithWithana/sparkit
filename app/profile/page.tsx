@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, {useState, useRef, useEffect, useCallback} from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { getUserProfileByUid, updateUserProfile, validateProfileImage } from "@/lib/profileService";
 import { UserProfile, ProfileFormData, SocialLinks } from "@/types/auth";
+import Image from "next/image";
 
 const ProfilePage: React.FC = () => {
     const { user } = useAuth();
@@ -33,16 +34,7 @@ const ProfilePage: React.FC = () => {
         profilePic: undefined,
     });
 
-    useEffect(() => {
-        if (!user) {
-            router.push("/signin");
-            return;
-        }
-
-        loadProfile();
-    }, [user, router]);
-
-    const loadProfile = async () => {
+    const loadProfile = useCallback(async () => {
         if (!user) return;
 
         try {
@@ -66,12 +58,21 @@ const ProfilePage: React.FC = () => {
                 });
                 setImagePreview(userProfile.profilePic || "");
             }
-        } catch (error: any) {
-            setError(error.message || "Failed to load profile");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to load profile");
         } finally {
             setLoading(false);
         }
-    };
+    }, [user]);
+
+    useEffect(() => {
+        if (!user) {
+            router.push("/signin");
+            return;
+        }
+
+        loadProfile();
+    }, [user, router, loadProfile]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -149,8 +150,8 @@ const ProfilePage: React.FC = () => {
 
             // Reload profile to get updated data
             await loadProfile();
-        } catch (error: any) {
-            setError(error.message || "Failed to update profile");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to update profile");
         } finally {
             setSaving(false);
         }
@@ -208,9 +209,11 @@ const ProfilePage: React.FC = () => {
                                 <div className="flex-shrink-0">
                                     {imagePreview ? (
                                         <div className="relative">
-                                            <img
+                                            <Image
                                                 src={imagePreview}
                                                 alt="Profile preview"
+                                                width={96}
+                                                height={96}
                                                 className="w-24 h-24 object-cover rounded-full border"
                                             />
                                             <button
