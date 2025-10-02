@@ -47,10 +47,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // Check if user has profile, if not create one (for Google sign-ins)
                 const profile = await getUserProfile(user.uid);
                 if (!profile && user.email) {
-                    // Create profile with email as username for Google users
                     const username = user.displayName || user.email.split('@')[0];
                     await createUserProfile(user.uid, user.email, username);
                 }
@@ -155,7 +153,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     return (
         <AuthContext.Provider value={value}>
-            {!loading && children}
+            {children}
         </AuthContext.Provider>
     );
 };

@@ -6,8 +6,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-    title: "Firebase Auth App",
-    description: "Next.js app with Firebase authentication",
+    title: "Poth Gullo",
+    description: "A platform to Write and Read",
 };
 
 export default function RootLayout({
